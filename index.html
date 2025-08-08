@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>アポイント共有アプリ</title>
+    <!-- ↓↓↓ この3行を <title> タグの下に挿入 ↓↓↓ -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0284c7"/>
+    <link rel="apple-touch-icon" href="icon-192.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -590,5 +594,19 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
+
+    <!-- ↓↓↓ このブロック全体を </body> タグの直前に挿入 ↓↓↓ -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').then(registration => {
+            console.log('ServiceWorker is registered successfully!');
+          }).catch(err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+        });
+      }
+    </script>
+
 </body>
 </html>
