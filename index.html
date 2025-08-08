@@ -4,12 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>アポイント共有アプリ</title>
-
-    <!-- 変更点①：PWAとして見栄えを良くするためのタグを追加 -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0284c7"/>
-    <link rel="apple-touch-icon" href="icon-192.png">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -18,7 +12,8 @@
             colors: {
               slate: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a' },
               sky: { 200: '#bae6fd', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1', 800: '#075985' },
-              rose: { 100: '#ffe4e6', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c' }
+              rose: { 100: '#ffe4e6', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c' },
+              green: { 100: '#dcfce7', 600: '#16a34a'}
             }
           }
         }
@@ -28,18 +23,23 @@
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; }
     </style>
+    <!-- React and Babel for running JSX in browser -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Japanese Holidays Library -->
+    <script src="https://cdn.jsdelivr.net/npm/japanese-holidays@1.0.10/lib/japanese-holidays.min.js"></script>
 </head>
 <body>
     <div id="root"></div>
 
+    <!-- Firebase SDKs (ESM version) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
+        // Make Firebase functions available globally for the Babel script
         window.Firebase = {
             initializeApp,
             getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken,
@@ -47,19 +47,22 @@
         };
     </script>
 
-    <script type="text/babel" data-type="module">
+    <!-- React App Code -->
+    <script type="text/babel">
+        // These imports are now handled by the script above and are available on the window object
         const { initializeApp } = window.Firebase;
         const { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } = window.Firebase;
         const { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } = window.Firebase;
         const { useState, useEffect, useRef } = React;
 
-        // --- SVG Icons (変更なし) ---
+        // --- SVG Icons ---
         const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 inline-block text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>;
         const LocationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 inline-block text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>;
         const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>;
+        const CalendarPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zM5 8a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 5a1 1 0 100-2 1 1 0 000 2zm3 0a1 1 0 100-2 1 1 0 000 2zm3 0a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /><path d="M13 14a1 1 0 100 2h3a1 1 0 100-2h-3z" /></svg>;
+        const InfoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 inline-block text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>;
 
-        // --- 変更点②：Firebase設定をあなた自身のものに差し替える ---
-        // このfirebaseConfigオブジェクトを、あなたのFirebaseプロジェクトからコピーしたものに置き換えてください。
+        // --- Firebase Configuration ---
         const firebaseConfig ={
   apiKey: "AIzaSyCqT_s4-XtGBkrX590DfYRQWPEdl-kE5-0",
   authDomain: "apointo-a72bc.firebaseapp.com",
@@ -69,9 +72,9 @@
   appId: "1:1014142886306:web:c97de02bb5f18b8af652fb",
   measurementId: "G-XWDNVF3W7V"
 };
-        const appId = 'default-app-id'; // この行はそのままにしてください
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-        // --- Helper: Format Visit Time (ここから下はあなたのコードのままです) ---
+        // --- Helper Functions ---
         const formatVisitTime = (startTimestamp, endTimestamp) => {
             if (!startTimestamp || !startTimestamp.seconds) return { date: '日時未設定', time: '' };
             const startDate = startTimestamp.toDate();
@@ -87,7 +90,55 @@
             return { date: dateStr, time: startTimeStr };
         };
 
-        // --- Components (変更なし) ---
+        const generateGoogleCalendarLink = (app) => {
+            const title = `${app.customerName} 様とのアポイント`;
+            const startDate = app.visitStartTimestamp.toDate();
+            let endDate;
+            if (app.visitEndTimestamp) {
+                endDate = app.visitEndTimestamp.toDate();
+            } else {
+                endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Default to 1 hour
+            }
+
+            // FIX: Use local time format instead of UTC to prevent timezone shifts.
+            const toLocalFormat = (date) => {
+                const YYYY = date.getFullYear();
+                const MM = ('0' + (date.getMonth() + 1)).slice(-2);
+                const DD = ('0' + date.getDate()).slice(-2);
+                const hh = ('0' + date.getHours()).slice(-2);
+                const mm = ('0' + date.getMinutes()).slice(-2);
+                const ss = ('0' + date.getSeconds()).slice(-2);
+                return `${YYYY}${MM}${DD}T${hh}${mm}${ss}`;
+            };
+            
+            const dates = `${toLocalFormat(startDate)}/${toLocalFormat(endDate)}`;
+            const details = `目的: ${app.purpose}\n担当: ${app.salesPerson}\n連絡先: ${app.contactPerson || '未入力'}`;
+            const location = app.address || '';
+
+            const url = new URL('https://www.google.com/calendar/render');
+            url.searchParams.append('action', 'TEMPLATE');
+            url.searchParams.append('text', title);
+            url.searchParams.append('dates', dates);
+            url.searchParams.append('details', details);
+            url.searchParams.append('location', location);
+            // Explicitly set the timezone to Japan Standard Time
+            url.searchParams.append('ctz', 'Asia/Tokyo');
+
+            return url.toString();
+        };
+
+        const getDateColorClass = (date) => {
+            // FIX: Check if the library object and its method exist before using them.
+            if (window.japaneseHolidays && typeof window.japaneseHolidays.isHoliday === 'function' && window.japaneseHolidays.isHoliday(date)) {
+                return 'text-rose-600';
+            }
+            const day = date.getDay();
+            if (day === 0) return 'text-rose-600'; // Sunday
+            if (day === 6) return 'text-sky-600';   // Saturday
+            return 'text-slate-800'; // Weekday
+        };
+
+        // --- Components ---
         const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel }) => {
             if (!isOpen) return null;
             return (
@@ -125,28 +176,38 @@
             );
         };
 
-        const AppointmentCard = ({ app, onEdit, onDelete, onViewDetails, isDetailPage = false }) => {
+        const AppointmentCard = ({ app, onEdit, onDelete, onViewDetails, isDetailPage = false, isPast = false }) => {
             const { date, time } = formatVisitTime(app.visitStartTimestamp, app.visitEndTimestamp);
+            const dateColorClass = getDateColorClass(app.visitStartTimestamp.toDate());
+            
+            const handleAddToCalendar = (e) => {
+                e.stopPropagation();
+                const url = generateGoogleCalendarLink(app);
+                window.open(url, '_blank', 'noopener,noreferrer');
+            };
+
             return (
-                <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm hover:shadow-lg transition-shadow duration-300">
+                <div className={`bg-white border border-slate-200 p-5 rounded-xl shadow-sm transition-shadow duration-300 ${!isPast && 'hover:shadow-lg'}`}>
                     <div className="flex justify-between items-start">
                         <div>
-                            {!isDetailPage && <p className="font-semibold text-sky-600">{date}</p>}
-                            <p className="text-2xl font-bold text-slate-800 mt-1">{time}</p>
+                            {(!isDetailPage || isPast) && <p className={`font-semibold ${isPast ? dateColorClass.replace('slate-800', 'slate-500').replace('sky-600', 'sky-500').replace('rose-600', 'rose-500') : dateColorClass}`}>{date}</p>}
+                            <p className={`text-2xl font-bold mt-1 ${isPast ? 'text-slate-500' : 'text-slate-800'}`}>{time}</p>
                         </div>
                         <div className="flex space-x-1">
-                            <button onClick={() => onEdit(app)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg></button>
-                            <button onClick={() => onDelete(app.id)} className="p-2 text-rose-500 hover:bg-rose-100 rounded-full transition"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg></button>
+                            <button onClick={handleAddToCalendar} title="Googleカレンダーに追加" className="p-2 text-green-600 hover:bg-green-100 rounded-full transition"><CalendarPlusIcon /></button>
+                            <button onClick={() => onEdit(app)} title="編集" className="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" /></svg></button>
+                            <button onClick={() => onDelete(app.id)} title="削除" className="p-2 text-rose-500 hover:bg-rose-100 rounded-full transition"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg></button>
                         </div>
                     </div>
                     <div className="mt-4 pt-4 border-t border-slate-200">
-                        <h3 className="text-lg font-bold text-slate-800">{app.customerName} 様</h3>
-                        {app.address && <p className="text-slate-600 text-sm mt-1"><LocationIcon />{app.address}</p>}
+                        <h3 className={`text-lg font-bold ${isPast ? 'text-slate-600' : 'text-slate-800'}`}>{app.customerName} 様</h3>
+                        {app.address && <p className="text-slate-600 text-sm mt-1 flex items-center"><LocationIcon />{app.address}</p>}
+                        {app.contactPerson && <p className="text-slate-600 text-sm mt-1 flex items-center"><InfoIcon />{app.contactPerson}</p>}
                         <p className="mt-3 text-sm text-slate-700 bg-slate-100 p-3 rounded-md whitespace-pre-wrap">{app.purpose}</p>
                     </div>
-                    {!isDetailPage && (
+                    {!isDetailPage && !isPast && (
                         <div className="mt-4 flex justify-between items-center">
-                            <span className="text-sm font-medium text-slate-500"><UserIcon />担当: {app.salesPerson}</span>
+                            <span className="text-sm font-medium text-slate-500 flex items-center"><UserIcon />担当: {app.salesPerson}</span>
                             <button onClick={() => onViewDetails(app.salesPerson)} className="text-sm font-semibold text-sky-600 hover:text-sky-800 transition">詳細を見る →</button>
                         </div>
                     )}
@@ -154,15 +215,22 @@
             );
         };
 
-        const DetailPage = ({ salesPerson, appointments, onBack, onEdit, onDelete }) => {
+        const DetailPage = ({ salesPerson, appointments, onBack, onEdit, onDelete, onViewPast }) => {
+            const now = new Date();
+            const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+            
             const personAppointments = appointments
-                .filter(app => app.salesPerson === salesPerson)
+                .filter(app => app.salesPerson === salesPerson && app.visitStartTimestamp.toDate() > oneHourAgo)
                 .sort((a, b) => a.visitStartTimestamp.seconds - b.visitStartTimestamp.seconds);
 
             const groupedAppointments = personAppointments.reduce((acc, app) => {
-                const date = app.visitStartTimestamp.toDate().toISOString().split('T')[0];
-                if (!acc[date]) acc[date] = [];
-                acc[date].push(app);
+                const jsDate = app.visitStartTimestamp.toDate();
+                const year = jsDate.getFullYear();
+                const month = ('0' + (jsDate.getMonth() + 1)).slice(-2);
+                const day = ('0' + jsDate.getDate()).slice(-2);
+                const dateKey = `${year}-${month}-${day}`;
+                if (!acc[dateKey]) acc[dateKey] = [];
+                acc[dateKey].push(app);
                 return acc;
             }, {});
 
@@ -171,24 +239,30 @@
             return (
                 <div className="container mx-auto p-4 sm:p-6 lg:p-8">
                     <header className="mb-8">
-                        <button onClick={onBack} className="flex items-center text-slate-600 hover:text-slate-900 font-semibold transition mb-4">
-                            <BackIcon />
-                            一覧に戻る
-                        </button>
+                        <div className="flex justify-between items-center">
+                            <button onClick={onBack} className="flex items-center text-slate-600 hover:text-slate-900 font-semibold transition mb-4">
+                                <BackIcon />
+                                一覧に戻る
+                            </button>
+                            <button onClick={onViewPast} className="text-sm font-semibold text-sky-600 hover:text-sky-800 transition mb-4">
+                                過去のアポを見る →
+                            </button>
+                        </div>
                         <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">{salesPerson}さんのアポイント</h1>
-                        <p className="text-slate-500 mt-2">{personAppointments.length}件の予定があります</p>
+                        <p className="text-slate-500 mt-2">{personAppointments.length}件の今後の予定があります</p>
                     </header>
                     <main>
                         {sortedDates.length > 0 ? (
                             <div className="space-y-8">
                                 {sortedDates.map(date => {
-                                    const dateObj = new Date(date);
+                                    const dateObj = new Date(date + 'T00:00:00');
                                     const dateOptions = { month: 'long', day: 'numeric', weekday: 'long' };
                                     const formattedDate = new Intl.DateTimeFormat('ja-JP', dateOptions).format(dateObj);
                                     const count = groupedAppointments[date].length;
+                                    const dateColorClass = getDateColorClass(dateObj);
                                     return (
                                         <section key={date}>
-                                            <h2 className="text-xl font-bold text-slate-700 mb-4 pb-2 border-b-2 border-sky-200">
+                                            <h2 className={`text-xl font-bold mb-4 pb-2 border-b-2 border-sky-200 ${dateColorClass}`}>
                                                 {formattedDate}
                                                 <span className="text-base font-medium text-slate-500 ml-3">({count}件)</span>
                                             </h2>
@@ -203,7 +277,46 @@
                             </div>
                         ) : (
                             <div className="text-center py-16 bg-white rounded-xl shadow-sm">
-                                <p className="text-slate-500">この担当者のアポイントはありません。</p>
+                                <p className="text-slate-500">今後のアポイントはありません。</p>
+                            </div>
+                        )}
+                    </main>
+                </div>
+            );
+        };
+        
+        const PastAppointmentsPage = ({ appointments, onBack, onEdit, onDelete, title, filterPerson = null }) => {
+            const now = new Date();
+            const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+            const pastAppointments = appointments
+                .filter(app => {
+                    const isPast = app.visitStartTimestamp.toDate() <= oneHourAgo;
+                    const personMatch = !filterPerson || app.salesPerson === filterPerson;
+                    return isPast && personMatch;
+                })
+                .sort((a, b) => b.visitStartTimestamp.seconds - a.visitStartTimestamp.seconds);
+
+            return (
+                <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+                    <header className="mb-8">
+                        <button onClick={onBack} className="flex items-center text-slate-600 hover:text-slate-900 font-semibold transition mb-4">
+                            <BackIcon />
+                            戻る
+                        </button>
+                        <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">{title}</h1>
+                        <p className="text-slate-500 mt-2">{pastAppointments.length}件の記録があります</p>
+                    </header>
+                    <main>
+                        {pastAppointments.length > 0 ? (
+                            <div className="space-y-5">
+                                {pastAppointments.map(app => (
+                                    <AppointmentCard key={app.id} app={app} onEdit={onEdit} onDelete={onDelete} isDetailPage={true} isPast={true} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-16 bg-white rounded-xl shadow-sm">
+                                <p className="text-slate-500">過去のアポイントはありません。</p>
                             </div>
                         )}
                     </main>
@@ -211,7 +324,7 @@
             );
         };
 
-        // --- Main App Component (変更なし) ---
+        // --- Main App Component ---
         function App() {
             const [db, setDb] = useState(null);
             const [auth, setAuth] = useState(null);
@@ -237,7 +350,7 @@
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [modalMessage, setModalMessage] = useState('');
             const [pendingAppointment, setPendingAppointment] = useState(null);
-            const [view, setView] = useState('main'); // 'main' or 'detail'
+            const [view, setView] = useState('main'); // 'main', 'detail', 'past_all', 'past_personal'
             const [selectedSalesPerson, setSelectedSalesPerson] = useState(null);
 
             useEffect(() => {
@@ -272,7 +385,7 @@
                 setIsLoading(true);
                 const collectionName = `${teamId}_appointments`;
                 const appointmentsCollection = collection(db, 'artifacts', appId, 'public', 'data', collectionName);
-                const q = query(appointmentsCollection, orderBy('visitStartTimestamp', 'desc'));
+                const q = query(appointmentsCollection, orderBy('visitStartTimestamp', 'asc'));
                 const unsubscribe = onSnapshot(q, (snapshot) => {
                     const appointmentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     setAppointments(appointmentsData);
@@ -287,11 +400,16 @@
             }, [isAuthReady, db, teamId]);
 
             useEffect(() => {
+                const now = new Date();
+                const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
                 setFilteredAppointments(
-                    appointments.filter(app => 
-                        (!filterDate || (app.visitStartTimestamp?.toDate().toISOString().split('T')[0] === filterDate)) &&
-                        (!filterSalesPerson || app.salesPerson === filterSalesPerson)
-                    )
+                    appointments.filter(app => {
+                        const isCurrent = app.visitStartTimestamp?.toDate() > oneHourAgo;
+                        const dateMatch = !filterDate || (app.visitStartTimestamp?.toDate().toISOString().split('T')[0] === filterDate);
+                        const personMatch = !filterSalesPerson || app.salesPerson === filterSalesPerson;
+                        return isCurrent && dateMatch && personMatch;
+                    })
                 );
             }, [appointments, filterDate, filterSalesPerson]);
 
@@ -362,10 +480,16 @@
             };
 
             const handleEdit = (appointment) => {
-                const toDateInputFormat = (date) => date.toISOString().split('T')[0];
+                const toDateInputFormat = (date) => {
+                    const year = date.getFullYear();
+                    const month = ('0' + (date.getMonth() + 1)).slice(-2);
+                    const day = ('0' + date.getDate()).slice(-2);
+                    return `${year}-${month}-${day}`;
+                };
                 const toTimeInputFormat = (date) => `${('0'+date.getHours()).slice(-2)}:${('0'+date.getMinutes()).slice(-2)}`;
-                setView('main'); 
-                setTimeout(() => { 
+                
+                setView('main');
+                setTimeout(() => {
                     setEditingId(appointment.id);
                     setCustomerName(appointment.customerName);
                     setContactPerson(appointment.contactPerson || '');
@@ -403,57 +527,62 @@
 
             if (!teamId) return <TeamIdEntry onTeamIdSubmit={handleTeamIdSubmit} />;
 
+            const mainView = (
+                <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+                    <header className="text-center mb-10 relative">
+                        <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-800">アポイント共有</h1>
+                        <p className="text-slate-500 mt-2">チームID: <span className="font-semibold text-sky-600">{teamId}</span></p>
+                        <button onClick={handleChangeTeamId} className="absolute top-0 right-0 text-xs text-slate-500 hover:text-sky-600 underline">ID変更</button>
+                    </header>
+                    <main className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div ref={formRef} className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-lg h-fit">
+                            <h2 className="text-2xl font-bold mb-6 border-b border-slate-200 pb-4">{editingId ? 'アポイント編集' : '新規アポイント登録'}</h2>
+                            <form onSubmit={handleSubmit} className="space-y-5">
+                                <div><label htmlFor="customerName" className="block text-sm font-semibold text-slate-700 mb-1">お名前 <span className="text-rose-500">*</span></label><input type="text" id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" required /></div>
+                                <div><label htmlFor="address" className="block text-sm font-semibold text-slate-700 mb-1">住所</label><input type="text" id="address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" /></div>
+                                <div><label htmlFor="contactPerson" className="block text-sm font-semibold text-slate-700 mb-1">その他連絡先など</label><input type="text" id="contactPerson" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" /></div>
+                                <div><label htmlFor="visitDate" className="block text-sm font-semibold text-slate-700 mb-1">訪問日 <span className="text-rose-500">*</span></label><input type="date" id="visitDate" value={visitDate} onChange={(e) => setVisitDate(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" required /></div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div><label htmlFor="visitStartTime" className="block text-sm font-semibold text-slate-700 mb-1">開始時間 <span className="text-rose-500">*</span></label><input type="time" id="visitStartTime" value={visitStartTime} onChange={(e) => setVisitStartTime(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" required /></div>
+                                    <div><label htmlFor="visitEndTime" className="block text-sm font-semibold text-slate-700 mb-1">終了時間</label><input type="time" id="visitEndTime" value={visitEndTime} onChange={(e) => setVisitEndTime(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" /></div>
+                                </div>
+                                <div><label htmlFor="salesPerson" className="block text-sm font-semibold text-slate-700 mb-1">営業担当 <span className="text-rose-500">*</span></label><input type="text" id="salesPerson" value={salesPerson} onChange={(e) => setSalesPerson(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" required /></div>
+                                <div><label htmlFor="purpose" className="block text-sm font-semibold text-slate-700 mb-1">目的・商談内容 <span className="text-rose-500">*</span></label><textarea id="purpose" value={purpose} onChange={(e) => setPurpose(e.target.value)} rows="4" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" required></textarea></div>
+                                <div className="flex items-center space-x-4 pt-2">
+                                    <button type="submit" className="w-full bg-sky-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-transform transform hover:scale-105 shadow-lg">{editingId ? '更新する' : '登録する'}</button>
+                                    {editingId && (<button type="button" onClick={resetForm} className="w-full bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-lg hover:bg-slate-300 transition">キャンセル</button>)}
+                                </div>
+                            </form>
+                        </div>
+                        <div className="lg:col-span-2">
+                            <div className="bg-white p-5 rounded-2xl shadow-lg mb-6">
+                                <div className="flex justify-between items-center mb-4">
+                                  <h3 className="text-xl font-bold text-slate-800">絞り込み</h3>
+                                  <button onClick={() => setView('past_all')} className="text-sm font-semibold text-sky-600 hover:text-sky-800 transition">チームの過去アポ →</button>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                                    <div><label htmlFor="filterDate" className="block text-sm font-medium text-slate-700 mb-1">訪問日</label><input type="date" id="filterDate" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition"/></div>
+                                    <div><label htmlFor="filterSalesPerson" className="block text-sm font-medium text-slate-700 mb-1">営業担当</label><select id="filterSalesPerson" value={filterSalesPerson} onChange={e => setFilterSalesPerson(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition bg-white"><option value="">すべての担当者</option>{uniqueSalesPeople.map(person => <option key={person} value={person}>{person}</option>)}</select></div>
+                                </div>
+                                <button onClick={() => {setFilterDate(''); setFilterSalesPerson('');}} className="mt-4 text-sm bg-slate-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-slate-600 transition">絞り込みをクリア</button>
+                            </div>
+                            <div className="space-y-5">
+                                {isLoading ? (<div className="text-center py-10"><p className="text-slate-500">データを読み込み中...</p></div>) : 
+                                filteredAppointments.length === 0 ? (<div className="text-center py-16 bg-white rounded-xl shadow-sm"><p className="text-slate-500">現在のアポイントはありません。</p><p className="text-slate-400 text-sm mt-2">新しいアポイントを登録してください。</p></div>) : 
+                                (filteredAppointments.map(app => (<AppointmentCard key={app.id} app={app} onEdit={handleEdit} onDelete={handleDelete} onViewDetails={handleViewDetails} />)))}
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+
             return (
                 <div className="bg-slate-50 min-h-screen font-sans text-slate-800">
                     <ConfirmationModal isOpen={isModalOpen} message={modalMessage} onConfirm={handleConfirmSubmit} onCancel={handleCancelSubmit} />
-                    {view === 'main' && (
-                        <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-                            <header className="text-center mb-10 relative">
-                                <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-800">アポイント共有</h1>
-                                <p className="text-slate-500 mt-2">チームID: <span className="font-semibold text-sky-600">{teamId}</span></p>
-                                <button onClick={handleChangeTeamId} className="absolute top-0 right-0 text-xs text-slate-500 hover:text-sky-600 underline">ID変更</button>
-                            </header>
-                            <main className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                <div ref={formRef} className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-lg h-fit">
-                                    <h2 className="text-2xl font-bold mb-6 border-b border-slate-200 pb-4">{editingId ? 'アポイント編集' : '新規アポイント登録'}</h2>
-                                    <form onSubmit={handleSubmit} className="space-y-5">
-                                        <div><label htmlFor="customerName" className="block text-sm font-semibold text-slate-700 mb-1">お名前 <span className="text-rose-500">*</span></label><input type="text" id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" required /></div>
-                                        <div><label htmlFor="address" className="block text-sm font-semibold text-slate-700 mb-1">住所</label><input type="text" id="address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" /></div>
-                                        <div><label htmlFor="contactPerson" className="block text-sm font-semibold text-slate-700 mb-1">その他連絡先など</label><input type="text" id="contactPerson" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" /></div>
-                                        <div><label htmlFor="visitDate" className="block text-sm font-semibold text-slate-700 mb-1">訪問日 <span className="text-rose-500">*</span></label><input type="date" id="visitDate" value={visitDate} onChange={(e) => setVisitDate(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" required /></div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div><label htmlFor="visitStartTime" className="block text-sm font-semibold text-slate-700 mb-1">開始時間 <span className="text-rose-500">*</span></label><input type="time" id="visitStartTime" value={visitStartTime} onChange={(e) => setVisitStartTime(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" required /></div>
-                                            <div><label htmlFor="visitEndTime" className="block text-sm font-semibold text-slate-700 mb-1">終了時間</label><input type="time" id="visitEndTime" value={visitEndTime} onChange={(e) => setVisitEndTime(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" /></div>
-                                        </div>
-                                        <div><label htmlFor="salesPerson" className="block text-sm font-semibold text-slate-700 mb-1">営業担当 <span className="text-rose-500">*</span></label><input type="text" id="salesPerson" value={salesPerson} onChange={(e) => setSalesPerson(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" required /></div>
-                                        <div><label htmlFor="purpose" className="block text-sm font-semibold text-slate-700 mb-1">目的・商談内容 <span className="text-rose-500">*</span></label><textarea id="purpose" value={purpose} onChange={(e) => setPurpose(e.target.value)} rows="4" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition" required></textarea></div>
-                                        <div className="flex items-center space-x-4 pt-2">
-                                            <button type="submit" className="w-full bg-sky-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-transform transform hover:scale-105 shadow-lg">{editingId ? '更新する' : '登録する'}</button>
-                                            {editingId && (<button type="button" onClick={resetForm} className="w-full bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-lg hover:bg-slate-300 transition">キャンセル</button>)}
-                                        </div>
-                                    </form>
-                                </div>
-                                <div className="lg:col-span-2">
-                                    <div className="bg-white p-5 rounded-2xl shadow-lg mb-6">
-                                        <h3 className="text-xl font-bold mb-4 text-slate-800">絞り込み</h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                                            <div><label htmlFor="filterDate" className="block text-sm font-medium text-slate-700 mb-1">訪問日</label><input type="date" id="filterDate" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition"/></div>
-                                            <div><label htmlFor="filterSalesPerson" className="block text-sm font-medium text-slate-700 mb-1">営業担当</label><select id="filterSalesPerson" value={filterSalesPerson} onChange={e => setFilterSalesPerson(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 transition bg-white"><option value="">すべての担当者</option>{uniqueSalesPeople.map(person => <option key={person} value={person}>{person}</option>)}</select></div>
-                                        </div>
-                                        <button onClick={() => {setFilterDate(''); setFilterSalesPerson('');}} className="mt-4 text-sm bg-slate-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-slate-600 transition">絞り込みをクリア</button>
-                                    </div>
-                                    <div className="space-y-5">
-                                        {isLoading ? (<div className="text-center py-10"><p className="text-slate-500">データを読み込み中...</p></div>) : 
-                                        filteredAppointments.length === 0 ? (<div className="text-center py-16 bg-white rounded-xl shadow-sm"><p className="text-slate-500">表示するアポイントがありません。</p><p className="text-slate-400 text-sm mt-2">条件を変更するか、新しいアポイントを登録してください。</p></div>) : 
-                                        (filteredAppointments.map(app => (<AppointmentCard key={app.id} app={app} onEdit={handleEdit} onDelete={handleDelete} onViewDetails={handleViewDetails} />)))}
-                                    </div>
-                                </div>
-                            </main>
-                        </div>
-                    )}
-                    {view === 'detail' && (
-                        <DetailPage salesPerson={selectedSalesPerson} appointments={appointments} onBack={() => setView('main')} onEdit={handleEdit} onDelete={handleDelete} />
-                    )}
+                    {view === 'main' && mainView}
+                    {view === 'detail' && <DetailPage salesPerson={selectedSalesPerson} appointments={appointments} onBack={() => setView('main')} onEdit={handleEdit} onDelete={handleDelete} onViewPast={() => setView('past_personal')} />}
+                    {view === 'past_all' && <PastAppointmentsPage appointments={appointments} onBack={() => setView('main')} onEdit={handleEdit} onDelete={handleDelete} title="チームの過去アポイント" />}
+                    {view === 'past_personal' && <PastAppointmentsPage appointments={appointments} onBack={() => setView('detail')} onEdit={handleEdit} onDelete={handleDelete} title={`${selectedSalesPerson}さんの過去アポイント`} filterPerson={selectedSalesPerson} />}
                 </div>
             );
         }
@@ -461,18 +590,5 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
-    
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js').then(registration => {
-            console.log('ServiceWorker is registered successfully!');
-          }).catch(err => {
-            console.log('ServiceWorker registration failed: ', err);
-          });
-        });
-      }
-    </script>
-
 </body>
 </html>
