@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>アポイント共有アプリ</title>
-    <!-- ↓↓↓ この3行を <title> タグの下に挿入 ↓↓↓ -->
+
+    <!-- PWA Tags (Corrected) -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0284c7"/>
     <link rel="apple-touch-icon" href="icon-192.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -27,23 +29,19 @@
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; }
     </style>
-    <!-- React and Babel for running JSX in browser -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Japanese Holidays Library -->
     <script src="https://cdn.jsdelivr.net/npm/japanese-holidays@1.0.10/lib/japanese-holidays.min.js"></script>
 </head>
 <body>
     <div id="root"></div>
 
-    <!-- Firebase SDKs (ESM version) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
-        // Make Firebase functions available globally for the Babel script
         window.Firebase = {
             initializeApp,
             getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken,
@@ -51,32 +49,31 @@
         };
     </script>
 
-    <!-- React App Code -->
-    <script type="text/babel">
-        // These imports are now handled by the script above and are available on the window object
+    <!-- ★★★★★ 修正点1: data-type="module" を追加 ★★★★★ -->
+    <script type="text/babel" data-type="module">
         const { initializeApp } = window.Firebase;
         const { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } = window.Firebase;
         const { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } = window.Firebase;
         const { useState, useEffect, useRef } = React;
 
-        // --- SVG Icons ---
+        // --- SVG Icons (変更なし) ---
         const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 inline-block text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>;
         const LocationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 inline-block text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>;
         const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" /></svg>;
         const CalendarPlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zM5 8a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 5a1 1 0 100-2 1 1 0 000 2zm3 0a1 1 0 100-2 1 1 0 000 2zm3 0a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /><path d="M13 14a1 1 0 100 2h3a1 1 0 100-2h-3z" /></svg>;
         const InfoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 inline-block text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>;
 
-        // --- Firebase Configuration ---
-        const firebaseConfig ={
-  apiKey: "AIzaSyCqT_s4-XtGBkrX590DfYRQWPEdl-kE5-0",
-  authDomain: "apointo-a72bc.firebaseapp.com",
-  projectId: "apointo-a72bc",
-  storageBucket: "apointo-a72bc.firebasestorage.app",
-  messagingSenderId: "1014142886306",
-  appId: "1:1014142886306:web:c97de02bb5f18b8af652fb",
-  measurementId: "G-XWDNVF3W7V"
-};
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // ★★★★★ 修正点2: あなたの正しいFirebase Configに修正 ★★★★★
+        const firebaseConfig = {
+            apiKey: "AIzaSyCqT_s4-XtGBkrX590DfYRQWPEdl-kE5-0",
+            authDomain: "apointo-a72bc.firebaseapp.com",
+            projectId: "apointo-a72bc",
+            storageBucket: "apointo-a72bc.appspot.com",
+            messagingSenderId: "1014142886306",
+            appId: "1:1014142886306:web:c97de02bb5f18b8af652fb",
+            measurementId: "G-XWDNVF3W7V"
+        };
+        const appId = 'default-app-id';
 
         // --- Helper Functions ---
         const formatVisitTime = (startTimestamp, endTimestamp) => {
@@ -103,8 +100,6 @@
             } else {
                 endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // Default to 1 hour
             }
-
-            // FIX: Use local time format instead of UTC to prevent timezone shifts.
             const toLocalFormat = (date) => {
                 const YYYY = date.getFullYear();
                 const MM = ('0' + (date.getMonth() + 1)).slice(-2);
@@ -114,25 +109,20 @@
                 const ss = ('0' + date.getSeconds()).slice(-2);
                 return `${YYYY}${MM}${DD}T${hh}${mm}${ss}`;
             };
-            
             const dates = `${toLocalFormat(startDate)}/${toLocalFormat(endDate)}`;
             const details = `目的: ${app.purpose}\n担当: ${app.salesPerson}\n連絡先: ${app.contactPerson || '未入力'}`;
             const location = app.address || '';
-
             const url = new URL('https://www.google.com/calendar/render');
             url.searchParams.append('action', 'TEMPLATE');
             url.searchParams.append('text', title);
             url.searchParams.append('dates', dates);
             url.searchParams.append('details', details);
             url.searchParams.append('location', location);
-            // Explicitly set the timezone to Japan Standard Time
             url.searchParams.append('ctz', 'Asia/Tokyo');
-
             return url.toString();
         };
 
         const getDateColorClass = (date) => {
-            // FIX: Check if the library object and its method exist before using them.
             if (window.japaneseHolidays && typeof window.japaneseHolidays.isHoliday === 'function' && window.japaneseHolidays.isHoliday(date)) {
                 return 'text-rose-600';
             }
@@ -594,7 +584,6 @@
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
-
     <!-- ↓↓↓ このブロック全体を </body> タグの直前に挿入 ↓↓↓ -->
     <script>
       if ('serviceWorker' in navigator) {
